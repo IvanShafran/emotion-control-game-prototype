@@ -114,7 +114,7 @@ public final class CameraXLivePreviewActivity extends AppCompatActivity
     private VisionImageProcessor imageProcessor;
     private boolean needUpdateGraphicOverlayImageSourceInfo;
 
-    private String selectedModel = OBJECT_DETECTION;
+    private String selectedModel = FACE_DETECTION;
     private int lensFacing = CameraSelector.LENS_FACING_FRONT;
     private CameraSelector cameraSelector;
 
@@ -195,6 +195,8 @@ public final class CameraXLivePreviewActivity extends AppCompatActivity
         if (!allPermissionsGranted()) {
             getRuntimePermissions();
         }
+        findViewById( R.id.settings_button ).setVisibility( View.GONE );
+        findViewById( R.id.control ).setVisibility( View.GONE );
     }
 
     @Override
