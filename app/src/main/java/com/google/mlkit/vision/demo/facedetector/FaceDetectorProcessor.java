@@ -40,6 +40,28 @@ import java.util.Locale;
  */
 public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
 
+    public static class Emotion {
+        public final float smileProbability;
+        public final float leftEyeOpenProbability;
+        public final float rightEyeOpenProbability;
+
+        public Emotion(float smileProbability, float leftEyeOpenProbability, float rightEyeOpenProbability) {
+            this.smileProbability = smileProbability;
+            this.leftEyeOpenProbability = leftEyeOpenProbability;
+            this.rightEyeOpenProbability = rightEyeOpenProbability;
+        }
+    }
+
+    public interface EmotionListener {
+        void onEmotion(Emotion emotion);
+    }
+
+    private EmotionListener listener;
+
+    public void setListener(EmotionListener listener) {
+        this.listener = listener;
+    }
+
     private static final String TAG = "FaceDetectorProcessor";
 
     private final FaceDetector detector;
@@ -72,6 +94,17 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
 
     @Override
     protected void onSuccess(@NonNull List<Face> faces, @NonNull GraphicOverlay graphicOverlay) {
+        if (!faces.isEmpty() && listener != null) {
+            Face face = faces.get(0);
+            if (face.getSmilingProbability() != null &&
+                    face.getLeftEyeOpenProbability() != null && face.getRightEyeOpenProbability() != null) {
+                listener.onEmotion(new Emotion(
+                        face.getSmilingProbability(),
+                        face.getLeftEyeOpenProbability(),
+                        face.getRightEyeOpenProbability()
+                ));
+            }
+        }
     }
 
     private static void logExtrasForTesting(Face face) {

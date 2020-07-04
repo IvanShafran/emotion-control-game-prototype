@@ -16,9 +16,6 @@
 
 package com.google.mlkit.vision.demo;
 
-import androidx.lifecycle.ViewModelProvider;
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory;
-
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
@@ -26,12 +23,6 @@ import android.content.pm.PackageManager;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
-
-import androidx.core.app.ActivityCompat;
-import androidx.core.app.ActivityCompat.OnRequestPermissionsResultCallback;
-import androidx.core.content.ContextCompat;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.util.Log;
 import android.util.Size;
 import android.view.Menu;
@@ -43,18 +34,25 @@ import android.widget.ArrayAdapter;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraInfoUnavailableException;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.ActivityCompat.OnRequestPermissionsResultCallback;
+import androidx.core.content.ContextCompat;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory;
 
 import com.google.android.gms.common.annotation.KeepName;
 import com.google.mlkit.common.MlKitException;
@@ -117,6 +115,8 @@ public final class CameraXLivePreviewActivity extends AppCompatActivity
     private String selectedModel = FACE_DETECTION;
     private int lensFacing = CameraSelector.LENS_FACING_FRONT;
     private CameraSelector cameraSelector;
+
+    private TextView emotionTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -195,8 +195,10 @@ public final class CameraXLivePreviewActivity extends AppCompatActivity
         if (!allPermissionsGranted()) {
             getRuntimePermissions();
         }
-        findViewById( R.id.settings_button ).setVisibility( View.GONE );
-        findViewById( R.id.control ).setVisibility( View.GONE );
+        findViewById(R.id.settings_button).setVisibility(View.GONE);
+        findViewById(R.id.control).setVisibility(View.GONE);
+
+        emotionTextView = findViewById(R.id.emotionTextView);
     }
 
     @Override
@@ -346,9 +348,13 @@ public final class CameraXLivePreviewActivity extends AppCompatActivity
                     break;
                 case FACE_DETECTION:
                     Log.i(TAG, "Using Face Detector Processor");
-                    FaceDetectorOptions faceDetectorOptions =
-                            PreferenceUtils.getFaceDetectorOptionsForLivePreview(this);
-                    imageProcessor = new FaceDetectorProcessor(this, faceDetectorOptions);
+                    FaceDetectorOptions faceDetectorOptions = new FaceDetectorOptions
+                            .Builder()
+                            .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
+                            .build();
+                    FaceDetectorProcessor faceDetectorProcessor = new FaceDetectorProcessor(this, faceDetectorOptions);
+                    faceDetectorProcessor.setListener(emotionListener);
+                    imageProcessor = faceDetectorProcessor;
                     break;
                 case BARCODE_SCANNING:
                     Log.i(TAG, "Using Barcode Detector Processor");
@@ -478,5 +484,38 @@ public final class CameraXLivePreviewActivity extends AppCompatActivity
         }
         Log.i(TAG, "Permission NOT granted: " + permission);
         return false;
+    }
+
+    private EmotionFlagsEstimator estimator = new EmotionFlagsEstimator();
+
+    private FaceDetectorProcessor.EmotionListener emotionListener = new FaceDetectorProcessor.EmotionListener() {
+        @Override
+        public void onEmotion(FaceDetectorProcessor.Emotion emotion) {
+            EmotionFlags flags = estimator.estimate(emotion);
+            showFlagsSmiles(flags);
+        }
+    };
+
+    private void showFlagsSmiles(EmotionFlags flags) {
+        StringBuilder builder = new StringBuilder();
+        if (flags.isRightEyeOpen()) {
+            builder.append("\uD83D\uDC41️ ");
+        } else {
+            builder.append("\uD83D\uDE48 ");
+        }
+
+        if (flags.isSmile()) {
+            builder.append("\uD83D\uDE04 ");
+        } else {
+            builder.append("\uD83D\uDE10 ");
+        }
+
+        if (flags.isLeftEyeOpen()) {
+            builder.append("\uD83D\uDC41️");
+        } else {
+            builder.append("\uD83D\uDE48");
+        }
+
+        emotionTextView.setText(builder.toString());
     }
 }
