@@ -351,6 +351,7 @@ public final class CameraXLivePreviewActivity extends AppCompatActivity
                     FaceDetectorOptions faceDetectorOptions = new FaceDetectorOptions
                             .Builder()
                             .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
+                            .setMinFaceSize(0.5f)
                             .build();
                     FaceDetectorProcessor faceDetectorProcessor = new FaceDetectorProcessor(this, faceDetectorOptions);
                     faceDetectorProcessor.setListener(emotionListener);
