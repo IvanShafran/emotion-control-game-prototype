@@ -10,8 +10,8 @@
       android:id="@+id/preview_view"
       android:layout_width="match_parent"
       android:layout_height="0dp"
-      app:layout_constraintTop_toTopOf="parent"
-      app:layout_constraintBottom_toTopOf="@+id/control"/>
+      app:layout_constraintHeight_percent="0.5"
+      app:layout_constraintTop_toTopOf="parent"/>
 
   <com.google.mlkit.vision.demo.GraphicOverlay
       android:id="@+id/graphic_overlay"
@@ -68,5 +68,14 @@
       android:textColor="#fff"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content" />
+
+  <com.google.mlkit.vision.demo.GameView
+      android:id="@+id/gameView"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:layout_constraintHeight_percent="0.5"
+      app:layout_constraintBottom_toBottomOf="parent"
+      android:layout_width="0dp"
+      android:layout_height="0dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

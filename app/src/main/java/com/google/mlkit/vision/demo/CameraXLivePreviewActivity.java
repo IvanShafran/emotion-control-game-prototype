@@ -117,6 +117,7 @@ public final class CameraXLivePreviewActivity extends AppCompatActivity
     private CameraSelector cameraSelector;
 
     private TextView emotionTextView;
+    private GameView gameView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -199,6 +200,7 @@ public final class CameraXLivePreviewActivity extends AppCompatActivity
         findViewById(R.id.control).setVisibility(View.GONE);
 
         emotionTextView = findViewById(R.id.emotionTextView);
+        gameView = findViewById(R.id.gameView);
     }
 
     @Override
@@ -494,6 +496,7 @@ public final class CameraXLivePreviewActivity extends AppCompatActivity
         public void onEmotion(FaceDetectorProcessor.Emotion emotion) {
             EmotionFlags flags = estimator.estimate(emotion);
             showFlagsSmiles(flags);
+            gameView.setEmotionFlags(flags);
         }
     };
 
