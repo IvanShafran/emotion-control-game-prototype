@@ -1,8 +1,11 @@
 package com.google.mlkit.vision.demo
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.*
+import android.os.AsyncTask
 import android.util.AttributeSet
+import android.util.Size
 import android.view.View
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random
@@ -14,25 +17,22 @@ class GameView @JvmOverloads constructor(
 ) : View(context, attributeSet, defStyleAttr) {
 
     private var isGameInitialized = false
-    private val playerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = Color.BLUE
-    }
-    private val cakePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = Color.RED
-    }
+    private val bitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val scorePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.GREEN
         textSize = context.resources.getDimension(R.dimen.score_size)
     }
+
+    private var gameAssets: GameAssets? = null
+    private var assetsLoadingTask: AsyncTask<Void, Void, GameAssets>? = null
     private var score: Int = 0
     private var scorePoint = PointF()
     private var playerSize = 0
     private var playerRect = RectF()
     private var cakeSize = 0
     private var cakeRect = RectF()
-    private val cakeSpeed = 1f / TimeUnit.SECONDS.toMillis(5) // Full screen width per millis
+    private var backgroundX = 0f
+    private val speed = 1f / TimeUnit.SECONDS.toMillis(5) // Full screen width per millis
     private var flags: EmotionFlags = EmotionFlags(false, false, false)
     private var previousTimestamp = 0L
 
@@ -40,18 +40,46 @@ class GameView @JvmOverloads constructor(
         this.flags = flags
     }
 
+    @SuppressLint("StaticFieldLeak")
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
+        if (isSizeZeros()) {
+            return
+        }
+
         isGameInitialized = false
+        assetsLoadingTask?.cancel(false)
+
+        playerSize = h / 4
+        cakeSize = h / 8
+        assetsLoadingTask = object : AsyncTask<Void, Void, GameAssets>() {
+            override fun doInBackground(vararg params: Void?): GameAssets {
+                return loadGameAssets(
+                        context,
+                        playerSize = Size(playerSize, playerSize),
+                        cakeSize = Size(cakeSize, cakeSize),
+                        gameSize = Size(w, h)
+                )
+            }
+
+            override fun onPostExecute(result: GameAssets) {
+                gameAssets = result
+                invalidate()
+            }
+        }
+        assetsLoadingTask?.execute()
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        assetsLoadingTask?.cancel(true)
     }
 
     private fun isSizeZeros() = width == 0 && height == 0
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        if (isSizeZeros()) {
-            return
-        }
+        val gameAssets = gameAssets ?: return
 
         if (!isGameInitialized) {
             initializePlayer()
@@ -62,27 +90,26 @@ class GameView @JvmOverloads constructor(
         }
 
         movePlayer()
-        moveCake()
+        moveCakeAndBackground()
 
         checkPlayerCaughtCake()
         checkCakeIsOutOfScreenStart()
+        checkBackgroundOutOfScreenStart()
 
-        drawPlayer(canvas)
-        drawCake(canvas)
+        drawBackground(canvas, gameAssets)
+        drawPlayer(canvas, gameAssets)
+        drawCake(canvas, gameAssets)
         drawScore(canvas)
 
         invalidate()
     }
 
     private fun initializePlayer() {
-        playerSize = height / 4
-
         playerRect.left = playerSize / 2f
         playerRect.right = playerRect.left + playerSize
     }
 
     private fun initializeCake() {
-        cakeSize = height / 8
         moveCakeToStartPoint()
     }
 
@@ -124,13 +151,15 @@ class GameView @JvmOverloads constructor(
         playerRect.bottom = playerRect.top + playerSize
     }
 
-    private fun moveCake() {
+    private fun moveCakeAndBackground() {
         val currentTime = System.currentTimeMillis()
         val deltaTime = currentTime - previousTimestamp
-        val deltaX = cakeSpeed * width * deltaTime
+        val deltaX = speed * width * deltaTime
 
         cakeRect.left -= deltaX
         cakeRect.right = cakeRect.left + cakeSize
+
+        backgroundX -= deltaX
 
         previousTimestamp = currentTime
     }
@@ -148,12 +177,24 @@ class GameView @JvmOverloads constructor(
         }
     }
 
-    private fun drawPlayer(canvas: Canvas) {
-        canvas.drawRect(playerRect, playerPaint)
+    private fun checkBackgroundOutOfScreenStart() {
+        if (-backgroundX > width) {
+            backgroundX = 0f
+        }
     }
 
-    private fun drawCake(canvas: Canvas) {
-        canvas.drawRect(cakeRect, cakePaint)
+    private fun drawBackground(canvas: Canvas, gameAssets: GameAssets) {
+        canvas.drawBitmap(gameAssets.background, backgroundX, 0f, bitmapPaint)
+        canvas.drawBitmap(gameAssets.background, width + backgroundX, 0f, bitmapPaint)
+    }
+
+    private fun drawPlayer(canvas: Canvas, gameAssets: GameAssets) {
+        val bitmap = gameAssets.player.getBitmap(System.currentTimeMillis())
+        canvas.drawBitmap(bitmap, playerRect.left, playerRect.top, bitmapPaint)
+    }
+
+    private fun drawCake(canvas: Canvas, gameAssets: GameAssets) {
+        canvas.drawBitmap(gameAssets.cake, cakeRect.left, cakeRect.top, bitmapPaint)
     }
 
     private fun drawScore(canvas: Canvas) {
